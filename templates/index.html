@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Chat with AI</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        background-color: #f0f0f0;
+        margin: 0;
+        padding: 0;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        height: 100vh;
+      }
+      .chat-container {
+        width: 400px;
+        height: 600px;
+        display: flex;
+        flex-direction: column;
+        border: 1px solid #ddd;
+        border-radius: 10px;
+        background-color: #fff;
+        box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        overflow: hidden;
+      }
+      .chat-box {
+        flex: 1;
+        padding: 10px;
+        overflow-y: auto;
+        border-bottom: 1px solid #ddd;
+      }
+      .input-container {
+        display: flex;
+        border-top: 1px solid #ddd;
+        padding: 10px;
+        background-color: #fafafa;
+      }
+      #user-input {
+        flex: 1;
+        padding: 10px;
+        border: 1px solid #ddd;
+        border-radius: 5px;
+        outline: none;
+      }
+      #send-btn {
+        padding: 10px 20px;
+        margin-left: 10px;
+        border: none;
+        background-color: #007bff;
+        color: #fff;
+        border-radius: 5px;
+        cursor: pointer;
+      }
+      #send-btn:hover {
+        background-color: #0056b3;
+      }
+      .message {
+        margin-bottom: 10px;
+      }
+      .message.ai {
+        text-align: left;
+      }
+      .message.user {
+        text-align: right;
+      }
+    </style>
+</head>
+<body>
+    <div class="chat-container">
+        <div class="chat-box" id="chat-box">
+            <!-- Chat messages will be displayed here -->
+        </div>
+        <form id="chat-form" method="post">
+            {% csrf_token %}
+            <div class="input-container">
+                <input type="text" id="user-input" name="user_input" placeholder="Type a message..." />
+                <button type="button" id="send-btn">Send</button>
+            </div>
+        </form>
+    </div>
+    <script>
+        document.getElementById("send-btn").addEventListener("click", function () {
+            const userInput = document.getElementById("user-input");
+            const chatBox = document.getElementById("chat-box");
+
+            if (userInput.value.trim() === "") return;
+
+            // Add user's message to chat box
+            const userMessage = document.createElement("div");
+            userMessage.className = "message user";
+            userMessage.textContent = userInput.value;
+            chatBox.appendChild(userMessage);
+
+            // Send AJAX request
+            const xhr = new XMLHttpRequest();
+            xhr.open("POST", "", true);
+            xhr.setRequestHeader("Content-Type", "application/x-www-form-urlencoded");
+            xhr.setRequestHeader("X-CSRFToken", document.querySelector('input[name="csrfmiddlewaretoken"]').value);
+
+            xhr.onreadystatechange = function () {
+                if (xhr.readyState == 4 && xhr.status == 200) {
+                    const response = JSON.parse(xhr.responseText);
+                    const aiMessage = document.createElement("div");
+                    aiMessage.className = "message ai";
+                    aiMessage.textContent = response.response;
+                    chatBox.appendChild(aiMessage);
+                    chatBox.scrollTop = chatBox.scrollHeight;
+                }
+            };
+
+            xhr.send("user_input=" + encodeURIComponent(userInput.value));
+
+            // Clear user input
+            userInput.value = "";
+        });
+    </script>
+
+    
+</body>
+</html>
