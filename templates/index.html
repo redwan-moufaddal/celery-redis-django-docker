@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+{% comment %} <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8" />
@@ -7,7 +7,7 @@
     <style>
       body {
         font-family: Arial, sans-serif;
-        background-color: #f0f0f0;
+        background-color: #f5f5f5;
         margin: 0;
         padding: 0;
         display: flex;
@@ -28,7 +28,7 @@
       }
       .chat-box {
         flex: 1;
-        padding: 10px;
+        padding: 20px;
         overflow-y: auto;
         border-bottom: 1px solid #ddd;
       }
@@ -59,14 +59,122 @@
       }
       .message {
         margin-bottom: 10px;
+        padding: 10px;
+        border-radius: 5px;
+        max-width: 80%;
       }
       .message.ai {
-        text-align: left;
+        background-color: #e1ffc7;
+        align-self: flex-start;
       }
       .message.user {
-        text-align: right;
+        background-color: #d1e7ff;
+        align-self: flex-end;
       }
     </style>
+</head>
+<body>
+    <div class="chat-container">
+        <div class="chat-box" id="chat-box">
+            {% for message in messages %}
+              <div class="message {{ message.class }}">{{ message.text }}</div>
+            {% endfor %}
+        </div>
+        <form id="chat-form" method="post" action="{% url 'home' %}">
+            {% csrf_token %}
+            <div class="input-container">
+                <input type="text" id="user-input" name="user_input" placeholder="Type a message..." required />
+                <button type="submit" id="send-btn">Send</button>
+            </div>
+        </form>
+    </div>
+</body>
+</html> {% endcomment %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Chat with AI</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        background-color: #f5f5f5;
+        margin: 0;
+        padding: 0;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        height: 100vh;
+      }
+      .chat-container {
+        width: 400px;
+        height: 600px;
+        display: flex;
+        flex-direction: column;
+        border: 1px solid #ddd;
+        border-radius: 10px;
+        background-color: #fff;
+        box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        overflow: hidden;
+      }
+      .chat-box {
+        flex: 1;
+        padding: 20px;
+        overflow-y: auto;
+        border-bottom: 1px solid #ddd;
+      }
+      .input-container {
+        display: flex;
+        border-top: 1px solid #ddd;
+        padding: 10px;
+        background-color: #fafafa;
+      }
+      #user-input {
+        flex: 1;
+        padding: 10px;
+        border: 1px solid #ddd;
+        border-radius: 5px;
+        outline: none;
+      }
+      #send-btn, #copy-btn {
+        padding: 10px 20px;
+        margin-left: 10px;
+        border: none;
+        border-radius: 5px;
+        cursor: pointer;
+      }
+      #send-btn {
+        background-color: #007bff;
+        color: #fff;
+      }
+      #send-btn:hover {
+        background-color: #0056b3;
+      }
+      #copy-btn {
+        background-color: #28a745;
+        color: #fff;
+      }
+      #copy-btn:hover {
+        background-color: #218838;
+      }
+      .message {
+        margin-bottom: 10px;
+        padding: 10px;
+        border-radius: 5px;
+        max-width: 80%;
+      }
+      .message.ai {
+        background-color: #e1ffc7;
+        align-self: flex-start;
+      }
+      .message.user {
+        background-color: #d1e7ff;
+        align-self: flex-end;
+      }
+    </style>
+    <!-- Load MathJax for rendering math expressions -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.7/MathJax.js?config=TeX-MML-AM_CHTML"></script>
 </head>
 <body>
     <div class="chat-container">
@@ -76,48 +184,95 @@
         <form id="chat-form" method="post">
             {% csrf_token %}
             <div class="input-container">
-                <input type="text" id="user-input" name="user_input" placeholder="Type a message..." />
+                <input type="text" id="user-input" name="user_input" placeholder="Type a message..." required />
                 <button type="button" id="send-btn">Send</button>
             </div>
         </form>
     </div>
     <script>
-        document.getElementById("send-btn").addEventListener("click", function () {
-            const userInput = document.getElementById("user-input");
-            const chatBox = document.getElementById("chat-box");
+      document.getElementById("send-btn").addEventListener("click", async function () {
+        const userInput = document.getElementById("user-input");
+        const chatBox = document.getElementById("chat-box");
 
-            if (userInput.value.trim() === "") return;
+        if (userInput.value.trim() === "") return;
 
-            // Add user's message to chat box
-            const userMessage = document.createElement("div");
-            userMessage.className = "message user";
-            userMessage.textContent = userInput.value;
-            chatBox.appendChild(userMessage);
+        // Add user's message to chat box
+        const userMessage = document.createElement("div");
+        userMessage.className = "message user";
+        userMessage.innerHTML = formatMessage(userInput.value);
+        chatBox.appendChild(userMessage);
 
-            // Send AJAX request
-            const xhr = new XMLHttpRequest();
-            xhr.open("POST", "", true);
-            xhr.setRequestHeader("Content-Type", "application/x-www-form-urlencoded");
-            xhr.setRequestHeader("X-CSRFToken", document.querySelector('input[name="csrfmiddlewaretoken"]').value);
+        // Send AJAX request to submit the task
+        const formData = new FormData();
+        formData.append("user_input", userInput.value);
+        formData.append("csrfmiddlewaretoken", document.querySelector('input[name="csrfmiddlewaretoken"]').value);
 
-            xhr.onreadystatechange = function () {
-                if (xhr.readyState == 4 && xhr.status == 200) {
-                    const response = JSON.parse(xhr.responseText);
-                    const aiMessage = document.createElement("div");
-                    aiMessage.className = "message ai";
-                    aiMessage.textContent = response.response;
-                    chatBox.appendChild(aiMessage);
-                    chatBox.scrollTop = chatBox.scrollHeight;
-                }
-            };
+        try {
+          const response = await fetch("/submit_task/", {
+            method: "POST",
+            body: formData,
+          });
 
-            xhr.send("user_input=" + encodeURIComponent(userInput.value));
+          if (!response.ok) {
+            throw new Error("Error submitting task");
+          }
 
-            // Clear user input
-            userInput.value = "";
-        });
+          const data = await response.json();
+          if (data.task_id) {
+            // Start polling for task status
+            await pollTaskStatus(data.task_id);
+          }
+        } catch (error) {
+          console.error("Request failed:", error);
+        }
+
+        // Clear user input
+        userInput.value = "";
+      });
+
+      async function pollTaskStatus(taskId) {
+        try {
+          while (true) {
+            const response = await fetch(`/task_status/${taskId}/`);
+            if (!response.ok) {
+              throw new Error("Error checking task status");
+            }
+
+            const statusResponse = await response.json();
+            if (statusResponse.status === 'completed') {
+              // Add AI's response to chat box
+              const aiMessage = document.createElement("div");
+              aiMessage.className = "message ai";
+              aiMessage.innerHTML = formatMessage(statusResponse.result);
+              document.getElementById("chat-box").appendChild(aiMessage);
+              document.getElementById("chat-box").scrollTop = document.getElementById("chat-box").scrollHeight;
+              break;
+            } else if (statusResponse.status === 'pending') {
+              // Poll again if task is still pending
+              await new Promise(resolve => setTimeout(resolve, 1000));
+            }
+          }
+        } catch (error) {
+          console.error("Polling failed:", error);
+        }
+      }
+
+      function formatMessage(message) {
+        // Replace new lines with <br> elements
+        let formattedMessage = message.replace(/\n/g, '<br>');
+
+        // Process mathematical expressions using MathJax
+        formattedMessage = formattedMessage.replace(/\$\$(.+?)\$\$/g, (match, p1) => `\\[${p1}\\]`);
+
+        // Add more formatting rules as needed
+
+        // Render MathJax expressions
+        MathJax.Hub.Queue(["Typeset", MathJax.Hub]);
+
+        return formattedMessage;
+      }
+
+     
     </script>
-
-    
 </body>
 </html>
